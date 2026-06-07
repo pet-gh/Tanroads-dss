@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TANROADS DSS v2 — Advanced Road Maintenance Prioritization</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#0a0f1e;--surface:#111827;--surface2:#1a2235;--border:#1e2d45;
+  --accent:#f59e0b;--accent2:#10b981;--accent3:#3b82f6;--danger:#ef4444;
+  --text:#e2e8f0;--muted:#64748b;
+  --mono:'Space Mono',monospace;--sans:'Sora',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;display:flex;flex-direction:column;}
+/* HEADER */
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 32px;display:flex;align-items:center;gap:14px;flex-shrink:0;}
+.logo-box{width:42px;height:42px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:13px;color:#0a0f1e;flex-shrink:0;}
+.header-text h1{font-size:16px;font-weight:700;}
+.header-text p{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px;}
+.hbadge{margin-left:auto;background:rgba(245,158,11,.15);border:1px solid var(--accent);color:var(--accent);font-family:var(--mono);font-size:10px;padding:3px 10px;border-radius:4px;}
+.hbtn{background:var(--accent);color:#0a0f1e;border:none;padding:8px 18px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);}
+.hbtn:hover{background:#d97706;}
+/* LAYOUT */
+.app{display:flex;flex:1;overflow:hidden;}
+/* SIDEBAR */
+.sidebar{width:260px;background:var(--surface);border-right:1px solid var(--border);padding:20px 16px;overflow-y:auto;flex-shrink:0;}
+.s-label{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;margin-top:20px;}
+.s-label:first-child{margin-top:0;}
+.nav-item{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:6px;cursor:pointer;font-size:12px;color:var(--muted);transition:all .2s;margin-bottom:3px;border:1px solid transparent;}
+.nav-item:hover{background:var(--surface2);color:var(--text);}
+.nav-item.active{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.3);color:var(--accent);}
+.ndot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0;}
+.nav-item.active .ndot{background:var(--accent);}
+/* weight bars */
+.wi{margin-bottom:10px;}
+.wl{display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;}
+.wl span:last-child{font-family:var(--mono);color:var(--accent);font-size:10px;}
+.wb{height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
+.wf{height:100%;background:var(--accent);border-radius:2px;}
+/* MAIN */
+.main{flex:1;overflow-y:auto;padding:28px 32px;}
+/* TABS */
+.tabs{display:flex;gap:2px;margin-bottom:24px;border-bottom:1px solid var(--border);}
+.tab{padding:9px 18px;font-size:12px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;font-family:var(--mono);}
+.tab:hover{color:var(--text);}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+/* SECTIONS */
+.sec{display:none;}
+.sec.active{display:block;}
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:22px;margin-bottom:18px;}
+.ct{font-size:11px;font-family:var(--mono);color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;}
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 18px;}
+.sv{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--accent);}
+.sl{font-size:10px;color:var(--muted);margin-top:3px;}
+/* RANK GRID */
+.rank-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;}
+.rc{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:18px;position:relative;overflow:hidden;transition:transform .2s,border-color .2s;}
+.rc:hover{transform:translateY(-2px);border-color:var(--accent);}
+.rc.r1{border-color:var(--accent);}
+.rc.r2{border-color:var(--accent2);}
+.rc.r3{border-color:var(--accent3);}
+.rn{font-family:var(--mono);font-size:44px;font-weight:700;color:var(--border);position:absolute;right:14px;top:6px;line-height:1;}
+.rc.r1 .rn{color:rgba(245,158,11,.15);}
+.rc.r2 .rn{color:rgba(16,185,129,.15);}
+.rc.r3 .rn{color:rgba(59,130,246,.15);}
+.rbadge{display:inline-block;font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:3px;margin-bottom:8px;}
+.r1 .rbadge{background:rgba(245,158,11,.2);color:var(--accent);}
+.r2 .rbadge{background:rgba(16,185,129,.2);color:var(--accent2);}
+.r3 .rbadge{background:rgba(59,130,246,.2);color:var(--accent3);}
+.rc:not(.r1):not(.r2):not(.r3) .rbadge{background:var(--border);color:var(--muted);}
+.rname{font-size:14px;font-weight:600;margin-bottom:6px;}
+.rcc{font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:10px;}
+.rcc span{color:var(--accent);}
+.rbb{height:3px;background:var(--border);border-radius:2px;}
+.rbf{height:100%;border-radius:2px;}
+.r1 .rbf{background:var(--accent);}
+.r2 .rbf{background:var(--accent2);}
+.r3 .rbf{background:var(--accent3);}
+.rc:not(.r1):not(.r2):not(.r3) .rbf{background:var(--muted);}
+/* TABLE */
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{text-align:left;font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--muted);padding:9px 12px;border-bottom:1px solid var(--border);background:var(--surface);}
+td{padding:10px 12px;border-bottom:1px solid rgba(30,45,69,.5);}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--surface2);}
+.mc{font-family:var(--mono);font-size:11px;text-align:right;}
+.hc{color:var(--accent);font-weight:700;}
+/* FORM */
+.fg{margin-bottom:14px;}
+.fl{font-size:11px;color:var(--muted);margin-bottom:6px;display:block;font-family:var(--mono);}
+.fi,.fs{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:6px;font-size:12px;font-family:var(--sans);outline:none;transition:border-color .2s;}
+.fi:focus,.fs:focus{border-color:var(--accent);}
+.fs option{background:var(--surface);}
+.slider-g{margin-bottom:14px;}
+.slv{font-family:var(--mono);font-size:11px;color:var(--accent);float:right;}
+input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer;margin-top:6px;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+/* BUTTONS */
+.btn{padding:10px 24px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all .2s;font-family:var(--sans);}
+.btn-p{background:var(--accent);color:#0a0f1e;}
+.btn-p:hover{background:#d97706;transform:translateY(-1px);}
+.btn-o{background:transparent;border:1px solid var(--border);color:var(--muted);}
+.btn-o:hover{border-color:var(--accent);color:var(--accent);}
+.btn-g{background:var(--accent2);color:#0a0f1e;}
+.btn-g:hover{background:#059669;}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;}
+/* RESULT PANEL */
+.rp{background:var(--surface2);border:1px solid var(--accent);border-radius:10px;padding:22px;margin-top:16px;display:none;}
+.rp.show{display:block;}
+.rt{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:1px;margin-bottom:14px;}
+.rrow{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);}
+.rrow:last-of-type{border-bottom:none;}
+.rrank{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--accent);width:36px;}
+.rname2{font-size:13px;font-weight:600;flex:1;padding:0 14px;}
+.rscore{font-family:var(--mono);font-size:12px;color:var(--accent2);}
+.rtag{font-size:9px;font-family:var(--mono);padding:2px 7px;border-radius:3px;margin-left:6px;}
+.rh{background:rgba(16,185,129,.15);color:var(--accent2);}
+.rm{background:rgba(245,158,11,.15);color:var(--accent);}
+.rl{background:rgba(100,116,139,.15);color:var(--muted);}
+/* MAP */
+#map{height:480px;border-radius:8px;border:1px solid var(--border);}
+.map-legend{display:flex;gap:16px;margin-top:10px;flex-wrap:wrap;}
+.ml-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);}
+.ml-dot{width:10px;height:10px;border-radius:50%;}
+/* BUDGET */
+.budget-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.seg-list{max-height:320px;overflow-y:auto;}
+.seg-item{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
+.seg-info{flex:1;}
+.seg-name{font-size:12px;font-weight:600;margin-bottom:3px;}
+.seg-meta{font-size:10px;color:var(--muted);font-family:var(--mono);}
+.seg-priority{font-family:var(--mono);font-size:11px;text-align:right;}
+.progress-bar{height:6px;background:var(--border);border-radius:3px;margin-top:8px;overflow:hidden;}
+.pb-fill{height:100%;border-radius:3px;transition:width .5s ease;}
+/* PDF EXPORT */
+.export-section{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:20px;}
+.export-preview{background:#fff;color:#111;border-radius:6px;padding:24px;margin-top:14px;font-family:var(--mono);font-size:11px;line-height:1.8;max-height:400px;overflow-y:auto;}
+/* CHART */
+.chart-wrap{position:relative;height:280px;}
+/* METHODOLOGY */
+.mstep{display:flex;gap:14px;margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--border);}
+.mstep:last-child{border-bottom:none;}
+.snum{width:30px;height:30px;background:rgba(245,158,11,.15);border:1px solid var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;color:var(--accent);flex-shrink:0;margin-top:2px;}
+.sc h4{font-size:13px;font-weight:600;margin-bottom:5px;}
+.sc p{font-size:12px;color:var(--muted);line-height:1.6;}
+/* NOTIFICATION */
+.notif{position:fixed;bottom:24px;right:24px;background:var(--accent2);color:#0a0f1e;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:600;font-family:var(--mono);opacity:0;transition:opacity .3s;pointer-events:none;z-index:9999;}
+.notif.show{opacity:1;}
+footer{background:var(--surface);border-top:1px solid var(--border);padding:12px 32px;font-size:10px;color:var(--muted);font-family:var(--mono);flex-shrink:0;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-box">DSS</div>
+  <div class="header-text">
+    <h1>TANROADS Road Maintenance DSS</h1>
+    <p>FAHP–TOPSIS Decision Support System | UDSM 2026 | Yusuph Pogwa</p>
+  </div>
+  <div class="hbadge">v2.0 ADVANCED</div>
+  <button class="hbtn" onclick="exportPDF()" style="margin-left:12px;">⬇ Export PDF Report</button>
+</header>
+
+<div class="app">
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="s-label">Modules</div>
+  <div class="nav-item active" onclick="showTab('dashboard',this)"><div class="ndot"></div>Dashboard & Rankings</div>
+  <div class="nav-item" onclick="showTab('input',this)"><div class="ndot"></div>Road Data Input</div>
+  <div class="nav-item" onclick="showTab('gis',this)"><div class="ndot"></div>GIS Map View</div>
+  <div class="nav-item" onclick="showTab('budget',this)"><div class="ndot"></div>Budget Optimization</div>
+  <div class="nav-item" onclick="showTab('matrix',this)"><div class="ndot"></div>Decision Matrix</div>
+  <div class="nav-item" onclick="showTab('methodology',this)"><div class="ndot"></div>Methodology</div>
+
+  <div class="s-label">AHP Criteria Weights</div>
+  <div class="wi"><div class="wl"><span>Effectiveness</span><span>0.29</span></div><div class="wb"><div class="wf" style="width:29%"></div></div></div>
+  <div class="wi"><div class="wl"><span>Value Addition</span><span>0.24</span></div><div class="wb"><div class="wf" style="width:24%"></div></div></div>
+  <div class="wi"><div class="wl"><span>Cost</span><span>0.21</span></div><div class="wb"><div class="wf" style="width:21%"></div></div></div>
+  <div class="wi"><div class="wl"><span>Implementation</span><span>0.16</span></div><div class="wb"><div class="wf" style="width:16%"></div></div></div>
+  <div class="wi"><div class="wl"><span>Safety</span><span>0.10</span></div><div class="wb"><div class="wf" style="width:10%"></div></div></div>
+
+  <div class="s-label">Study Info</div>
+  <div style="font-size:10px;color:var(--muted);line-height:1.9;">
+    <div>Author: Yusuph Pogwa</div>
+    <div>Supervisor: Dr. John Kafuku</div>
+    <div>Institution: UDSM</div>
+    <div>Method: FAHP–TOPSIS</div>
+    <div>Year: 2026</div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+<!-- ══ DASHBOARD ══ -->
+<div class="sec active" id="tab-dashboard">
+  <div class="stats-row">
+    <div class="stat-card"><div class="sv">7</div><div class="sl">Maintenance Strategies</div></div>
+    <div class="stat-card"><div class="sv">5</div><div class="sl">Decision Criteria</div></div>
+    <div class="stat-card"><div class="sv" id="totalSegs">8</div><div class="sl">Road Segments Loaded</div></div>
+    <div class="stat-card"><div class="sv" id="totalBudget">2,340</div><div class="sl">Total Budget (TZS M)</div></div>
+  </div>
+
+  <div class="card">
+    <div class="ct">TOPSIS Ranking — All Maintenance Strategies</div>
+    <div class="rank-grid">
+      <div class="rc r1"><div class="rn">1</div><div class="rbadge">#1 BEST</div><div class="rname">Reliability-Centered Maintenance</div><div class="rcc">CC: <span>1.000</span></div><div class="rbb"><div class="rbf" style="width:100%"></div></div></div>
+      <div class="rc r2"><div class="rn">2</div><div class="rbadge">#2</div><div class="rname">Predictive Maintenance</div><div class="rcc">CC: <span>0.704</span></div><div class="rbb"><div class="rbf" style="width:70.4%"></div></div></div>
+      <div class="rc r3"><div class="rn">3</div><div class="rbadge">#3</div><div class="rname">Preventive Maintenance</div><div class="rcc">CC: <span>0.638</span></div><div class="rbb"><div class="rbf" style="width:63.8%"></div></div></div>
+      <div class="rc"><div class="rn">4</div><div class="rbadge">#4</div><div class="rname">Corrective Maintenance</div><div class="rcc">CC: <span>0.339</span></div><div class="rbb"><div class="rbf" style="width:33.9%"></div></div></div>
+      <div class="rc"><div class="rn">5</div><div class="rbadge">#5</div><div class="rname">Periodic Maintenance</div><div class="rcc">CC: <span>0.448</span></div><div class="rbb"><div class="rbf" style="width:44.8%"></div></div></div>
+      <div class="rc"><div class="rn">6</div><div class="rbadge">#6</div><div class="rname">Emergency Maintenance</div><div class="rcc">CC: <span>0.270</span></div><div class="rbb"><div class="rbf" style="width:27%"></div></div></div>
+      <div class="rc"><div class="rn">7</div><div class="rbadge">#7</div><div class="rname">Routine Maintenance</div><div class="rcc">CC: <span>0.199</span></div><div class="rbb"><div class="rbf" style="width:19.9%"></div></div></div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+    <div class="card">
+      <div class="ct">Closeness Coefficient Comparison</div>
+      <div class="chart-wrap"><canvas id="chartCC"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ct">Criteria Weight Distribution</div>
+      <div class="chart-wrap"><canvas id="chartW"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ INPUT ══ -->
+<div class="sec" id="tab-input">
+  <div class="card">
+    <div class="ct">Road Segment Data Input</div>
+    <div class="form-grid">
+      <div class="fg"><label class="fl">Segment ID</label><input class="fi" id="segId" placeholder="e.g. TZ-DSM-001"></div>
+      <div class="fg"><label class="fl">Region</label>
+        <select class="fs" id="region">
+          <option>Dar es Salaam</option><option>Dodoma</option><option>Mwanza</option>
+          <option>Arusha</option><option>Morogoro</option><option>Mbeya</option>
+          <option>Tanga</option><option>Tabora</option><option>Other</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">Road Length (km)</label><input class="fi" type="number" id="length" placeholder="e.g. 45"></div>
+      <div class="fg"><label class="fl">Road Class</label>
+        <select class="fs" id="roadClass">
+          <option>Trunk Road</option><option>Regional Road</option><option>District Road</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ct">Pavement Condition Indicators</div>
+    <div class="slider-g">
+      <div class="wl"><span class="fl" style="margin:0">PCI — Pavement Condition Index (0=Failed, 100=Excellent)</span><span class="slv" id="pciVal">50</span></div>
+      <input type="range" min="0" max="100" value="50" id="pci" oninput="document.getElementById('pciVal').textContent=this.value;computeDSS()">
+    </div>
+    <div class="slider-g">
+      <div class="wl"><span class="fl" style="margin:0">IRI — International Roughness Index (m/km)</span><span class="slv" id="iriVal">4.0</span></div>
+      <input type="range" min="1" max="16" step="0.5" value="4" id="iri" oninput="document.getElementById('iriVal').textContent=parseFloat(this.value).toFixed(1);computeDSS()">
+    </div>
+    <div class="slider-g">
+      <div class="wl"><span class="fl" style="margin:0">AADT — Average Annual Daily Traffic (vehicles/day)</span><span class="slv" id="aadtVal">5,000</span></div>
+      <input type="range" min="100" max="50000" step="100" value="5000" id="aadt" oninput="document.getElementById('aadtVal').textContent=parseInt(this.value).toLocaleString();computeDSS()">
+    </div>
+    <div class="slider-g">
+      <div class="wl"><span class="fl" style="margin:0">Maintenance Cost Estimate (TZS Million)</span><span class="slv" id="costVal">500</span></div>
+      <input type="range" min="10" max="5000" step="10" value="500" id="costEst" oninput="document.getElementById('costVal').textContent=parseInt(this.value).toLocaleString();computeDSS()">
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ct">Strategic Context</div>
+    <div class="form-grid">
+      <div class="fg"><label class="fl">Strategic Importance</label>
+        <select class="fs" id="strategic" onchange="computeDSS()">
+          <option value="3">High — Economic corridor / SGR link</option>
+          <option value="2">Medium — Regional connector</option>
+          <option value="1">Low — Local access road</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">Last Maintenance (years ago)</label>
+        <select class="fs" id="lastMaint" onchange="computeDSS()">
+          <option value="1">Less than 1 year</option>
+          <option value="2">1–3 years</option>
+          <option value="3" selected>3–5 years</option>
+          <option value="4">5–10 years</option>
+          <option value="5">Over 10 years</option>
+        </select>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-p" onclick="computeDSS()">▶ Compute Recommendation</button>
+      <button class="btn btn-g" onclick="addSegment()">+ Add to Road Database</button>
+      <button class="btn btn-o" onclick="resetForm()">Reset</button>
+    </div>
+  </div>
+
+  <div class="rp" id="resultPanel">
+    <div class="rt">▸ DSS RECOMMENDATION OUTPUT</div>
+    <div id="resultContent"></div>
+  </div>
+</div>
+
+<!-- ══ GIS MAP ══ -->
+<div class="sec" id="tab-gis">
+  <div class="card">
+    <div class="ct">GIS Map — Tanzania Road Network Condition</div>
+    <div id="map"></div>
+    <div class="map-legend">
+      <div class="ml-item"><div class="ml-dot" style="background:#ef4444"></div>Critical (PCI &lt; 25)</div>
+      <div class="ml-item"><div class="ml-dot" style="background:#f59e0b"></div>Poor (PCI 25–50)</div>
+      <div class="ml-item"><div class="ml-dot" style="background:#3b82f6"></div>Fair (PCI 50–70)</div>
+      <div class="ml-item"><div class="ml-dot" style="background:#10b981"></div>Good (PCI &gt; 70)</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ct">Segment Summary from Map</div>
+    <div id="mapSegList"></div>
+  </div>
+</div>
+
+<!-- ══ BUDGET ══ -->
+<div class="sec" id="tab-budget">
+  <div class="card">
+    <div class="ct">Budget Optimization — Resource Allocation</div>
+    <div class="form-grid" style="margin-bottom:16px;">
+      <div class="fg">
+        <label class="fl">Total Available Budget (TZS Million)</label>
+        <input class="fi" type="number" id="totalBudgetInput" value="2000" oninput="optimizeBudget()">
+      </div>
+      <div class="fg">
+        <label class="fl">Allocation Strategy</label>
+        <select class="fs" id="allocStrategy" onchange="optimizeBudget()">
+          <option value="priority">Priority-Based (TOPSIS score)</option>
+          <option value="condition">Condition-Based (worst first)</option>
+          <option value="traffic">Traffic-Based (highest AADT first)</option>
+        </select>
+      </div>
+    </div>
+    <div class="budget-grid">
+      <div>
+        <div class="ct" style="margin-bottom:10px;">Road Segments — Priority Queue</div>
+        <div class="seg-list" id="segPriorityList"></div>
+      </div>
+      <div>
+        <div class="ct" style="margin-bottom:10px;">Budget Allocation Chart</div>
+        <div class="chart-wrap"><canvas id="chartBudget"></canvas></div>
+        <div style="margin-top:14px;padding:12px;background:var(--surface2);border-radius:6px;font-size:11px;font-family:var(--mono);">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+            <span style="color:var(--muted)">Total Budget</span>
+            <span id="bTotal" style="color:var(--accent)">TZS 2,000M</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+            <span style="color:var(--muted)">Allocated</span>
+            <span id="bAlloc" style="color:var(--accent2)">TZS 0M</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span style="color:var(--muted)">Remaining</span>
+            <span id="bRemain" style="color:var(--danger)">TZS 2,000M</span>
+          </div>
+          <div class="progress-bar" style="margin-top:10px;">
+            <div class="pb-fill" id="bProgress" style="width:0%;background:var(--accent2)"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MATRIX ══ -->
+<div class="sec" id="tab-matrix">
+  <div class="card">
+    <div class="ct">Fuzzy Decision Matrix (Triangular Fuzzy Numbers)</div>
+    <table>
+      <thead><tr><th>Alternative</th><th>Cost</th><th>Value Addition</th><th>Implementation</th><th>Safety</th><th>Effectiveness</th></tr></thead>
+      <tbody>
+        <tr><td>Routine Maintenance</td><td class="mc">(3,4,5)</td><td class="mc">(4,5,6)</td><td class="mc">(4,5,6)</td><td class="mc">(4,5,6)</td><td class="mc">(3,4,5)</td></tr>
+        <tr><td>Periodic Maintenance</td><td class="mc">(4,5,6)</td><td class="mc">(5,6,7)</td><td class="mc">(4,5,6)</td><td class="mc">(5,6,7)</td><td class="mc">(5,6,7)</td></tr>
+        <tr><td>Emergency Maintenance</td><td class="mc">(5,6,7)</td><td class="mc">(3,4,5)</td><td class="mc">(3,4,5)</td><td class="mc">(3,4,5)</td><td class="mc">(4,5,6)</td></tr>
+        <tr><td>Preventive Maintenance</td><td class="mc">(4,5,6)</td><td class="mc">(5,6,7)</td><td class="mc">(5,6,7)</td><td class="mc">(5,6,7)</td><td class="mc">(6,7,8)</td></tr>
+        <tr><td>Corrective Maintenance</td><td class="mc">(3,4,5)</td><td class="mc">(4,5,6)</td><td class="mc">(4,5,6)</td><td class="mc">(4,5,6)</td><td class="mc">(4,5,6)</td></tr>
+        <tr><td>Predictive Maintenance</td><td class="mc">(4,5,6)</td><td class="mc">(5,6,7)</td><td class="mc">(6,7,8)</td><td class="mc">(5,6,7)</td><td class="mc">(6,7,8)</td></tr>
+        <tr><td><strong>Reliability-Centered</strong></td><td class="mc hc">(5,6,7)</td><td class="mc hc">(6,7,8)</td><td class="mc hc">(6,7,8)</td><td class="mc hc">(6,7,8)</td><td class="mc hc">(7,8,9)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="card">
+    <div class="ct">Weighted Normalized Decision Matrix</div>
+    <table>
+      <thead><tr><th>Alternative</th><th>Cost (0.21)</th><th>Value Add. (0.24)</th><th>Implement. (0.16)</th><th>Safety (0.10)</th><th>Effectiveness (0.29)</th></tr></thead>
+      <tbody>
+        <tr><td>A1 — Routine</td><td class="mc">0.105</td><td class="mc">0.148</td><td class="mc">0.091</td><td class="mc">0.060</td><td class="mc">0.145</td></tr>
+        <tr><td>A2 — Periodic</td><td class="mc">0.126</td><td class="mc">0.180</td><td class="mc">0.091</td><td class="mc">0.075</td><td class="mc">0.203</td></tr>
+        <tr><td>A3 — Emergency</td><td class="mc">0.147</td><td class="mc">0.120</td><td class="mc">0.072</td><td class="mc">0.045</td><td class="mc">0.174</td></tr>
+        <tr><td>A4 — Preventive</td><td class="mc">0.126</td><td class="mc">0.180</td><td class="mc">0.120</td><td class="mc">0.075</td><td class="mc">0.232</td></tr>
+        <tr><td>A5 — Corrective</td><td class="mc">0.105</td><td class="mc">0.148</td><td class="mc">0.091</td><td class="mc">0.060</td><td class="mc">0.174</td></tr>
+        <tr><td>A6 — Predictive</td><td class="mc">0.126</td><td class="mc">0.180</td><td class="mc">0.136</td><td class="mc">0.075</td><td class="mc">0.232</td></tr>
+        <tr><td><strong>A7 — RCM</strong></td><td class="mc hc">0.147</td><td class="mc hc">0.204</td><td class="mc hc">0.136</td><td class="mc hc">0.085</td><td class="mc hc">0.261</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══ METHODOLOGY ══ -->
+<div class="sec" id="tab-methodology">
+  <div class="card">
+    <div class="ct">DSS Framework — FAHP + TOPSIS</div>
+    <div class="mstep"><div class="snum">1</div><div class="sc"><h4>Data Collection</h4><p>PCI, IRI, AADT, maintenance cost estimates, and expert judgments collected from TANROADS field engineers and inspectors across Tanzania's trunk and regional road network.</p></div></div>
+    <div class="mstep"><div class="snum">2</div><div class="sc"><h4>Criteria Weighting — Fuzzy AHP</h4><p>Five criteria weighted using pairwise comparison: Effectiveness (0.29), Value Addition (0.24), Cost (0.21), Implementation (0.16), Safety (0.10). Consistency Ratio verified within acceptable limits.</p></div></div>
+    <div class="mstep"><div class="snum">3</div><div class="sc"><h4>Decision Matrix Construction</h4><p>Seven maintenance strategies evaluated against five criteria using triangular fuzzy numbers (l, m, u) to capture uncertainty in expert judgment. Numbers defuzzified and normalized.</p></div></div>
+    <div class="mstep"><div class="snum">4</div><div class="sc"><h4>TOPSIS Ranking</h4><p>Euclidean distance calculated from Positive Ideal Solution (A⁺) and Negative Ideal Solution (A⁻). Closeness Coefficient CC = S⁻ / (S⁺ + S⁻) determines final ranking.</p></div></div>
+    <div class="mstep"><div class="snum">5</div><div class="sc"><h4>GIS Integration</h4><p>Road segments mapped spatially using Leaflet.js with OpenStreetMap. Each segment colour-coded by PCI condition. Click any marker to view full DSS recommendation for that segment.</p></div></div>
+    <div class="mstep"><div class="snum">6</div><div class="sc"><h4>Budget Optimization</h4><p>Available budget allocated across road segments using priority-based, condition-based, or traffic-based strategies. Optimized allocation ensures maximum network performance per TZS spent.</p></div></div>
+    <div class="mstep"><div class="snum">7</div><div class="sc"><h4>PDF Report Export</h4><p>Full DSS report exported as a printable PDF including rankings, road segment data, budget allocation summary, and recommended maintenance strategies for TANROADS submission.</p></div></div>
+  </div>
+</div>
+
+</main>
+</div>
+
+<footer>TANROADS DSS v2.0 — Pogwa, Y. (2026). Development of Decision Support System for Road Maintenance Strategy Prioritization. UDSM MEM Dissertation. Supervisor: Dr. John Kafuku.</footer>
+<div class="notif" id="notif"></div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
+const strategies = [
+  {name:"Reliability-Centered Maintenance", cc:1.000, sp:0.000, sn:0.171},
+  {name:"Predictive Maintenance",           cc:0.704, sp:0.053, sn:0.126},
+  {name:"Preventive Maintenance",           cc:0.638, sp:0.067, sn:0.118},
+  {name:"Corrective Maintenance",           cc:0.339, sp:0.129, sn:0.066},
+  {name:"Periodic Maintenance",             cc:0.448, sp:0.102, sn:0.083},
+  {name:"Emergency Maintenance",            cc:0.270, sp:0.146, sn:0.054},
+  {name:"Routine Maintenance",              cc:0.199, sp:0.161, sn:0.040},
+];
+
+let roadSegments = [
+  {id:"TZ-DSM-001",region:"Dar es Salaam",road:"Nyerere Rd",class:"Trunk Road",  len:28,pci:22,iri:9.5,aadt:42000,cost:850, lat:-6.800,lng:39.200,strategic:3,last:4},
+  {id:"TZ-DSM-002",region:"Dar es Salaam",road:"Morogoro Rd",class:"Trunk Road", len:15,pci:45,iri:6.2,aadt:28000,cost:320, lat:-6.780,lng:39.240,strategic:3,last:3},
+  {id:"TZ-ARU-001",region:"Arusha",       road:"Arusha–Moshi",class:"Trunk Road",len:82,pci:61,iri:4.1,aadt:12000,cost:640, lat:-3.387,lng:36.682,strategic:2,last:2},
+  {id:"TZ-DOD-001",region:"Dodoma",       road:"Dodoma Bypass",class:"Regional", len:34,pci:18,iri:11.2,aadt:8500,cost:420,  lat:-6.173,lng:35.739,strategic:2,last:5},
+  {id:"TZ-MWZ-001",region:"Mwanza",       road:"Mwanza Port Rd",class:"Trunk",   len:12,pci:55,iri:5.1,aadt:15000,cost:180, lat:-2.516,lng:32.900,strategic:3,last:2},
+  {id:"TZ-MBY-001",region:"Mbeya",        road:"Mbeya–Tunduma",class:"Trunk Rd", len:95,pci:38,iri:7.8,aadt:9200,cost:780,  lat:-8.910,lng:33.460,strategic:2,last:4},
+  {id:"TZ-TNG-001",region:"Tanga",        road:"Tanga–Horohoro",class:"Regional",len:68,pci:71,iri:3.2,aadt:6800,cost:390,  lat:-5.069,lng:39.099,strategic:1,last:1},
+  {id:"TZ-TAB-001",region:"Tabora",       road:"Tabora–Nzega",  class:"Regional",len:120,pci:29,iri:9.0,aadt:3200,cost:560, lat:-5.022,lng:32.800,strategic:1,last:5},
+];
+
+// ── TAB NAVIGATION ────────────────────────────────────────────────────────────
+function showTab(id, el) {
+  document.querySelectorAll('.sec').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  if(el) el.classList.add('active');
+  if(id==='gis' && !window.mapInited) initMap();
+  if(id==='budget') optimizeBudget();
+}
+
+// ── CHARTS ────────────────────────────────────────────────────────────────────
+function initCharts() {
+  const cc = document.getElementById('chartCC').getContext('2d');
+  new Chart(cc, {
+    type:'bar',
+    data:{
+      labels:strategies.map(s=>s.name.replace(' Maintenance','').replace('Reliability-Centered','RCM')),
+      datasets:[{
+        label:'Closeness Coefficient',
+        data:strategies.map(s=>s.cc),
+        backgroundColor:strategies.map((_,i)=>i===0?'rgba(245,158,11,0.8)':i===1?'rgba(16,185,129,0.6)':i===2?'rgba(59,130,246,0.6)':'rgba(100,116,139,0.4)'),
+        borderRadius:4,
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:'#64748b',font:{size:9}},grid:{color:'rgba(30,45,69,0.5)'}},
+        y:{min:0,max:1,ticks:{color:'#64748b',font:{size:9}},grid:{color:'rgba(30,45,69,0.5)'}}
+      }
+    }
+  });
+
+  const cw = document.getElementById('chartW').getContext('2d');
+  new Chart(cw, {
+    type:'doughnut',
+    data:{
+      labels:['Effectiveness','Value Addition','Cost','Implementation','Safety'],
+      datasets:[{data:[29,24,21,16,10],backgroundColor:['#f59e0b','#10b981','#3b82f6','#8b5cf6','#ef4444'],borderWidth:0}]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#94a3b8',font:{size:10}},position:'bottom'}}
+    }
+  });
+}
+
+// ── GIS MAP ───────────────────────────────────────────────────────────────────
+let mapInited = false;
+let leafMap, budgetChart;
+
+function pciColor(pci) {
+  if(pci < 25) return '#ef4444';
+  if(pci < 50) return '#f59e0b';
+  if(pci < 70) return '#3b82f6';
+  return '#10b981';
+}
+
+function initMap() {
+  mapInited = true;
+  leafMap = L.map('map').setView([-6.5, 35], 5);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'© OpenStreetMap contributors',
+    maxZoom:18
+  }).addTo(leafMap);
+
+  roadSegments.forEach(seg => {
+    const col = pciColor(seg.pci);
+    const rec = getDSSRec(seg);
+    const circle = L.circleMarker([seg.lat, seg.lng], {
+      radius:12, fillColor:col, color:'#fff', weight:2,
+      fillOpacity:0.9
+    }).addTo(leafMap);
+    circle.bindPopup(`
+      <div style="font-family:monospace;font-size:12px;min-width:200px;">
+        <strong style="font-size:13px;">${seg.road}</strong><br>
+        <span style="color:#64748b">${seg.id} | ${seg.region}</span><br><br>
+        PCI: <strong>${seg.pci}</strong> | IRI: <strong>${seg.iri} m/km</strong><br>
+        AADT: <strong>${seg.aadt.toLocaleString()}</strong> veh/day<br>
+        Budget: <strong>TZS ${seg.cost}M</strong><br><br>
+        <strong style="color:${col}">Recommended: ${rec[0].name}</strong>
+      </div>
+    `);
+  });
+
+  renderMapSegList();
+}
+
+function renderMapSegList() {
+  const el = document.getElementById('mapSegList');
+  el.innerHTML = roadSegments.map(seg => {
+    const col = pciColor(seg.pci);
+    const rec = getDSSRec(seg);
+    return `<div class="seg-item">
+      <div class="seg-info">
+        <div class="seg-name">${seg.road} <span style="color:var(--muted);font-size:10px;">(${seg.id})</span></div>
+        <div class="seg-meta">${seg.region} | ${seg.len}km | PCI: ${seg.pci} | IRI: ${seg.iri}</div>
+        <div style="font-size:10px;margin-top:4px;color:${col}">▸ ${rec[0].name}</div>
+      </div>
+      <div class="seg-priority">
+        <div style="font-size:18px;font-weight:700;color:${col}">${seg.pci}</div>
+        <div style="font-size:9px;color:var(--muted)">PCI</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── DSS COMPUTE ───────────────────────────────────────────────────────────────
+function getDSSRec(seg) {
+  const combined = (seg.pci/100)*0.5 + (1-Math.min(seg.iri/16,1))*0.5;
+  let recs;
+  if(combined < 0.25 || seg.last >= 4)
+    recs = [strategies[0],strategies[1],strategies[2]];
+  else if(combined < 0.55)
+    recs = [strategies[1],strategies[2],strategies[3]];
+  else if(combined < 0.75)
+    recs = [strategies[2],strategies[4],strategies[6]];
+  else
+    recs = [strategies[6],strategies[4],strategies[2]];
+  if(seg.strategic===3) recs = [strategies[0],strategies[1],strategies[2]];
+  return recs;
+}
+
+function computeDSS() {
+  const seg = {
+    pci:parseInt(document.getElementById('pci').value),
+    iri:parseFloat(document.getElementById('iri').value),
+    aadt:parseInt(document.getElementById('aadt').value),
+    cost:parseInt(document.getElementById('costEst').value),
+    strategic:parseInt(document.getElementById('strategic').value),
+    last:parseInt(document.getElementById('lastMaint').value),
+  };
+  const recs = getDSSRec(seg);
+  const tagClass = (i) => i===0?'rh':i===1?'rm':'rl';
+  const tagLabel = (i) => i===0?'HIGH PRIORITY':i===1?'MODERATE':'LOW PRIORITY';
+
+  let html = recs.map((r,i) => `
+    <div class="rrow">
+      <div class="rrank">#${i+1}</div>
+      <div class="rname2">${r.name}</div>
+      <div class="rscore">CC: ${r.cc.toFixed(3)}</div>
+      <span class="rtag ${tagClass(i)}">${tagLabel(i)}</span>
+    </div>
+  `).join('');
+  html += `<div style="margin-top:12px;font-size:10px;color:var(--muted);font-family:var(--mono);">
+    PCI:${seg.pci} | IRI:${seg.iri}m/km | AADT:${seg.aadt.toLocaleString()} | TZS ${seg.cost}M
+  </div>`;
+  document.getElementById('resultContent').innerHTML = html;
+  document.getElementById('resultPanel').classList.add('show');
+}
+
+function addSegment() {
+  const id = document.getElementById('segId').value || 'TZ-NEW-'+(roadSegments.length+1);
+  const newSeg = {
+    id,
+    region: document.getElementById('region').value,
+    road: id,
+    class: document.getElementById('roadClass').value,
+    len: parseFloat(document.getElementById('length').value)||10,
+    pci: parseInt(document.getElementById('pci').value),
+    iri: parseFloat(document.getElementById('iri').value),
+    aadt: parseInt(document.getElementById('aadt').value),
+    cost: parseInt(document.getElementById('costEst').value),
+    strategic: parseInt(document.getElementById('strategic').value),
+    last: parseInt(document.getElementById('lastMaint').value),
+    lat: -6.5 + (Math.random()-0.5)*8,
+    lng: 35 + (Math.random()-0.5)*8,
+  };
+  roadSegments.push(newSeg);
+  document.getElementById('totalSegs').textContent = roadSegments.length;
+  const total = roadSegments.reduce((s,r)=>s+r.cost,0);
+  document.getElementById('totalBudget').textContent = total.toLocaleString();
+  notify('Segment '+id+' added to database');
+  optimizeBudget();
+}
+
+function resetForm() {
+  document.getElementById('pci').value=50;document.getElementById('pciVal').textContent='50';
+  document.getElementById('iri').value=4;document.getElementById('iriVal').textContent='4.0';
+  document.getElementById('aadt').value=5000;document.getElementById('aadtVal').textContent='5,000';
+  document.getElementById('costEst').value=500;document.getElementById('costVal').textContent='500';
+  document.getElementById('resultPanel').classList.remove('show');
+}
+
+// ── BUDGET OPTIMIZATION ───────────────────────────────────────────────────────
+function optimizeBudget() {
+  const totalBudget = parseInt(document.getElementById('totalBudgetInput').value)||2000;
+  const strategy = document.getElementById('allocStrategy').value;
+
+  let sorted = [...roadSegments];
+  if(strategy==='priority') sorted.sort((a,b)=>getDSSRec(a)[0].cc-getDSSRec(b)[0].cc).reverse();
+  else if(strategy==='condition') sorted.sort((a,b)=>a.pci-b.pci);
+  else sorted.sort((a,b)=>b.aadt-a.aadt);
+
+  let remaining = totalBudget;
+  let allocated = 0;
+  const results = sorted.map(seg => {
+    const rec = getDSSRec(seg);
+    const canFund = remaining >= seg.cost;
+    if(canFund){ remaining -= seg.cost; allocated += seg.cost; }
+    return {...seg, rec, canFund, allocated: canFund?seg.cost:0};
+  });
+
+  // render priority list
+  const el = document.getElementById('segPriorityList');
+  el.innerHTML = results.map((r,i) => `
+    <div class="seg-item" style="border-color:${r.canFund?'var(--accent2)':'var(--border)'};">
+      <div class="seg-info">
+        <div class="seg-name">${r.road} <span style="color:var(--muted);font-size:10px;">${r.id}</span></div>
+        <div class="seg-meta">PCI:${r.pci} | AADT:${r.aadt.toLocaleString()} | TZS ${r.cost}M</div>
+        <div style="font-size:10px;margin-top:3px;color:${r.canFund?'var(--accent2)':'var(--muted)'}">
+          ${r.canFund?'✓ FUNDED — '+r.rec[0].name:'✗ DEFERRED — insufficient budget'}
+        </div>
+      </div>
+      <div style="font-size:9px;font-family:var(--mono);text-align:right;">
+        <div style="color:${r.canFund?'var(--accent2)':'var(--danger)'}">
+          ${r.canFund?'TZS '+r.cost+'M':'—'}
+        </div>
+        <div style="color:var(--muted);margin-top:2px;">#${i+1}</div>
+      </div>
+    </div>
+  `).join('');
+
+  // update budget display
+  const pct = Math.min((allocated/totalBudget)*100,100);
+  document.getElementById('bTotal').textContent  = 'TZS '+totalBudget.toLocaleString()+'M';
+  document.getElementById('bAlloc').textContent  = 'TZS '+allocated.toLocaleString()+'M';
+  document.getElementById('bRemain').textContent = 'TZS '+(totalBudget-allocated).toLocaleString()+'M';
+  document.getElementById('bProgress').style.width = pct+'%';
+
+  // budget chart
+  const ctx = document.getElementById('chartBudget').getContext('2d');
+  if(window.bChart) window.bChart.destroy();
+  window.bChart = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: results.map(r=>r.id),
+      datasets:[{
+        label:'Allocated (TZS M)',
+        data: results.map(r=>r.allocated),
+        backgroundColor: results.map(r=>r.canFund?'rgba(16,185,129,0.7)':'rgba(100,116,139,0.2)'),
+        borderRadius:4,
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:'#64748b',font:{size:8}},grid:{color:'rgba(30,45,69,0.5)'}},
+        y:{ticks:{color:'#64748b',font:{size:9}},grid:{color:'rgba(30,45,69,0.5)'}}
+      }
+    }
+  });
+}
+
+// ── PDF EXPORT ────────────────────────────────────────────────────────────────
+function exportPDF() {
+  const now = new Date().toLocaleDateString('en-TZ',{year:'numeric',month:'long',day:'numeric'});
+  const totalBudget = parseInt(document.getElementById('totalBudgetInput').value)||2000;
+  let allocated = 0;
+  roadSegments.forEach(s=>{allocated+=s.cost;});
+
+  const win = window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>TANROADS DSS Report</title>
+  <style>
+    body{font-family:'Courier New',monospace;font-size:11px;color:#111;padding:40px;max-width:800px;margin:0 auto;}
+    h1{font-size:18px;border-bottom:3px solid #111;padding-bottom:8px;margin-bottom:4px;}
+    h2{font-size:13px;margin:20px 0 8px;border-bottom:1px solid #ccc;padding-bottom:4px;}
+    h3{font-size:11px;margin:12px 0 6px;}
+    table{width:100%;border-collapse:collapse;margin-bottom:14px;}
+    th{background:#111;color:#fff;padding:6px 10px;text-align:left;font-size:10px;}
+    td{padding:5px 10px;border-bottom:1px solid #ddd;font-size:10px;}
+    .rank1{background:#fff8e1;font-weight:bold;}
+    .meta{color:#555;font-size:10px;}
+    .footer{margin-top:40px;border-top:1px solid #ccc;padding-top:12px;color:#555;font-size:9px;}
+    @media print{body{padding:20px;}}
+  </style></head><body>
+  <h1>TANROADS ROAD MAINTENANCE DSS REPORT</h1>
+  <div class="meta">Generated: ${now} | System: FAHP–TOPSIS v2.0 | Author: Yusuph Pogwa, UDSM 2026</div>
+
+  <h2>1. EXECUTIVE SUMMARY</h2>
+  <p>This report presents the output of the Decision Support System (DSS) developed for TANROADS road maintenance prioritization using integrated Fuzzy Analytic Hierarchy Process (FAHP) and TOPSIS methodology. The system evaluates ${roadSegments.length} road segments across Tanzania based on pavement condition, traffic volume, strategic importance, and maintenance history.</p>
+
+  <h2>2. CRITERIA WEIGHTS (FAHP RESULTS)</h2>
+  <table>
+    <tr><th>Criterion</th><th>Weight</th><th>Interpretation</th></tr>
+    <tr><td>Effectiveness</td><td>0.29</td><td>Most critical — long-term operational performance</td></tr>
+    <tr><td>Value Addition</td><td>0.24</td><td>Road quality and service delivery improvement</td></tr>
+    <tr><td>Cost</td><td>0.21</td><td>Financial efficiency under budget constraints</td></tr>
+    <tr><td>Implementation</td><td>0.16</td><td>Operational feasibility and execution capacity</td></tr>
+    <tr><td>Safety</td><td>0.10</td><td>Worker and road user safety compliance</td></tr>
+  </table>
+
+  <h2>3. TOPSIS RANKING — MAINTENANCE STRATEGIES</h2>
+  <table>
+    <tr><th>Rank</th><th>Strategy</th><th>CC Score</th><th>S⁺</th><th>S⁻</th><th>Priority</th></tr>
+    ${strategies.sort((a,b)=>b.cc-a.cc).map((s,i)=>`
+    <tr class="${i===0?'rank1':''}">
+      <td>#${i+1}</td><td>${s.name}</td><td>${s.cc.toFixed(3)}</td>
+      <td>${s.sp.toFixed(3)}</td><td>${s.sn.toFixed(3)}</td>
+      <td>${i<3?'HIGH PRIORITY':i<5?'MODERATE':'LOW PRIORITY'}</td>
+    </tr>`).join('')}
+  </table>
+
+  <h2>4. ROAD SEGMENT ASSESSMENT</h2>
+  <table>
+    <tr><th>Segment ID</th><th>Road</th><th>Region</th><th>PCI</th><th>IRI</th><th>AADT</th><th>Cost(TZS M)</th><th>Recommendation</th></tr>
+    ${roadSegments.map(s=>{
+      const rec=getDSSRec(s);
+      return `<tr>
+        <td>${s.id}</td><td>${s.road}</td><td>${s.region}</td>
+        <td>${s.pci}</td><td>${s.iri}</td><td>${s.aadt.toLocaleString()}</td>
+        <td>${s.cost}</td><td>${rec[0].name}</td>
+      </tr>`;
+    }).join('')}
+  </table>
+
+  <h2>5. BUDGET ALLOCATION SUMMARY</h2>
+  <table>
+    <tr><th>Item</th><th>Amount (TZS Million)</th></tr>
+    <tr><td>Total Available Budget</td><td>${totalBudget.toLocaleString()}</td></tr>
+    <tr><td>Total Estimated Cost (All Segments)</td><td>${allocated.toLocaleString()}</td></tr>
+    <tr><td>Segments Assessed</td><td>${roadSegments.length}</td></tr>
+    <tr><td>High Priority Segments (PCI &lt; 25)</td><td>${roadSegments.filter(s=>s.pci<25).length}</td></tr>
+    <tr><td>Critical Segments (IRI &gt; 8)</td><td>${roadSegments.filter(s=>s.iri>8).length}</td></tr>
+  </table>
+
+  <h2>6. RECOMMENDATIONS</h2>
+  <p>Based on the FAHP–TOPSIS analysis, TANROADS should adopt a proactive maintenance strategy that prioritizes <strong>Reliability-Centered Maintenance</strong> (CC=1.000) for critical road segments with PCI below 25 and IRI above 8 m/km. <strong>Predictive Maintenance</strong> (CC=0.704) is recommended for moderately deteriorated segments, while <strong>Preventive Maintenance</strong> (CC=0.638) should be applied to roads in fair condition to delay further deterioration.</p>
+
+  <div class="footer">
+    TANROADS DSS v2.0 | Pogwa, Y. (2026). Development of Decision Support System for Road Maintenance Strategy Prioritization. MSc Engineering Management Dissertation, University of Dar es Salaam. Supervisor: Dr. John Kafuku.
+  </div>
+  <script>window.print();<\/script>
+  </body></html>`);
+  win.document.close();
+  notify('PDF report generated — printing dialog opened');
+}
+
+// ── NOTIFICATION ──────────────────────────────────────────────────────────────
+function notify(msg) {
+  const n = document.getElementById('notif');
+  n.textContent = msg;
+  n.classList.add('show');
+  setTimeout(()=>n.classList.remove('show'),3000);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+window.addEventListener('load',()=>{
+  initCharts();
+  const total = roadSegments.reduce((s,r)=>s+r.cost,0);
+  document.getElementById('totalBudget').textContent = total.toLocaleString();
+});
+</script>
+</body>
+</html>
